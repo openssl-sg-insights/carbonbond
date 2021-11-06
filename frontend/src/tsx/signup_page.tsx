@@ -23,7 +23,7 @@ export function SignupPage(props: Props): JSX.Element {
 		handleSubmit,
 		watch,
 		errors
-	} = useForm({mode: 'onBlur'});
+	} = useForm({ mode: 'onBlur' });
 
 	const password = React.useRef({});
 	password.current = watch('password', '');
@@ -53,7 +53,7 @@ export function SignupPage(props: Props): JSX.Element {
 		});
 	}, [token]);
 
-	const onSubmit = (data: {name: string, password: string}): void => {
+	const onSubmit = (data: { name: string, password: string }): void => {
 		signup_request(data.name, data.password);
 	};
 
@@ -79,9 +79,9 @@ export function SignupPage(props: Props): JSX.Element {
 			<div className={style.signupForm}>
 				<div className={style.counter}>你的email是：　{email}　</div>
 				<form onSubmit={handleSubmit(onSubmit)}>
-					<input className={style.username} type="text" placeholder="使用者名稱" name="name" ref={register({ required: {value: true, message: '必填'} })} autoFocus />
+					<input className={style.username} type="text" placeholder="使用者名稱" name="name" ref={register({ required: { value: true, message: '必填' } })} autoFocus />
 					{errors.name && <InvalidMessage msg={errors.name.message} />}
-					<input className={style.password} type="password" placeholder="密碼" name = "password" ref={register({
+					<input className={style.password} type="password" placeholder="密碼" name="password" ref={register({
 						...length_limit,
 					})} />
 					{errors.password && <InvalidMessage msg={errors.password.message} />}
@@ -89,7 +89,7 @@ export function SignupPage(props: Props): JSX.Element {
 						...length_limit,
 						validate: value =>
 							value === password.current || '兩次密碼輸入不同'
-					})}  />
+					})} />
 					{errors.repeat_password && <InvalidMessage msg={errors.repeat_password.message} />}
 					<div>
 						<button>

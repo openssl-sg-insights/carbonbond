@@ -104,6 +104,9 @@ export class UserQuery {
     async queryMyFavoriteArticleList(): Promise<Result<Array<Favorite>, Error>> {
         return JSON.parse(await this.fetchResult({ "User": { "QueryMyFavoriteArticleList": {  } } }));
     }
+    async recordSignupApply(name: string, email: string, birth_year: number, birth_month: number, birth_date: number, gender: string, certificate_image: string, is_invite: boolean): Promise<Result<null, Error>> {
+        return JSON.parse(await this.fetchResult({ "User": { "RecordSignupApply": { name, email, birth_year, birth_month, birth_date, gender, certificate_image, is_invite } } }));
+    }
     async sendSignupEmail(email: string, is_invite: boolean): Promise<Result<null, Error>> {
         return JSON.parse(await this.fetchResult({ "User": { "SendSignupEmail": { email, is_invite } } }));
     }

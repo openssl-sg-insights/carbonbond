@@ -8,6 +8,7 @@ pub trait UserQueryRouter {
     async fn query_me(&self, context: &mut crate::Ctx, ) -> Result<Option<super::model::User>, crate::custom_error::Error>;
     async fn query_my_party_list(&self, context: &mut crate::Ctx, ) -> Result<Vec<super::model::Party>, crate::custom_error::Error>;
     async fn query_my_favorite_article_list(&self, context: &mut crate::Ctx, ) -> Result<Vec<super::model::Favorite>, crate::custom_error::Error>;
+    async fn record_signup_apply(&self, context: &mut crate::Ctx, name: String, email: String, birth_year: i32, birth_month: i32, birth_date: i32, gender: String, certificate_image: String, is_invite: bool) -> Result<(), crate::custom_error::Error>;
     async fn send_signup_email(&self, context: &mut crate::Ctx, email: String, is_invite: bool) -> Result<(), crate::custom_error::Error>;
     async fn send_reset_password_email(&self, context: &mut crate::Ctx, email: String) -> Result<(), crate::custom_error::Error>;
     async fn signup(&self, context: &mut crate::Ctx, user_name: String, password: String, token: String) -> Result<super::model::User, crate::custom_error::Error>;
@@ -48,6 +49,11 @@ pub trait UserQueryRouter {
             }
              UserQuery::QueryMyFavoriteArticleList {  } => {
                  let resp = self.query_my_favorite_article_list(context, ).await;
+                 let s = serde_json::to_string(&resp)?;
+                 Ok((s, resp.err()))
+            }
+             UserQuery::RecordSignupApply { name, email, birth_year, birth_month, birth_date, gender, certificate_image, is_invite } => {
+                 let resp = self.record_signup_apply(context, name, email, birth_year, birth_month, birth_date, gender, certificate_image, is_invite).await;
                  let s = serde_json::to_string(&resp)?;
                  Ok((s, resp.err()))
             }

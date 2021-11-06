@@ -2,7 +2,9 @@ use super::{get_pool, DBObject, ToFallible};
 use crate::api::model::{SignupInvitation, SignupInvitationCredit, User};
 use crate::config::get_config;
 use crate::custom_error::{DataType, ErrorCode, Fallible};
-use crate::email::{self, send_invitation_email, send_signup_email};
+use crate::email::{self, send_signup_email};
+use base64::decode;
+use chrono::NaiveDate;
 
 impl DBObject for User {
     const TYPE: DataType = DataType::User;
@@ -119,9 +121,17 @@ pub async fn get_signup_invitation_credit(user_id: i64) -> Fallible<Vec<SignupIn
     .await?;
     Ok(credits)
 }
-pub async fn create_signup_token(email: &str, inviter_id: Option<i64>) -> Fallible<()> {
+pub async fn create_signup_token(
+    name: &str,
+    email: &str,
+    birth: NaiveDate,
+    gender: &str,
+    certificate_image: &str,
+    inviter_id: Option<i64>,
+) -> Fallible<()> {
     let mut conn = get_pool().begin().await?;
 
+    log::trace!("1. 若是邀請註冊，檢查發出邀請者的邀請額度是否足夠");
     // 1. 若是邀請註冊，檢查發出邀請者的邀請額度是否足夠
     if let Some(inviter_id) = inviter_id {
         struct Ret {
@@ -151,6 +161,7 @@ pub async fn create_signup_token(email: &str, inviter_id: Option<i64>) -> Fallib
         }
     }
 
+    log::trace!("2. 檢查 email 是否被用過");
     // 2. 檢查 email 是否被用過
     let arr = sqlx::query!("SELECT 1 as t from users where email = $1 LIMIT 1", email)
         .fetch_all(&mut conn)
@@ -168,26 +179,40 @@ pub async fn create_signup_token(email: &str, inviter_id: Option<i64>) -> Fallib
         return Err(ErrorCode::DuplicateInvitation.into());
     }
 
+    log::trace!("3. 生成 token");
     // 3. 生成 token
     let token = crate::util::generate_token();
+    let img = decode(certificate_image)?;
     sqlx::query!(
-        "INSERT INTO signup_tokens (email, token, inviter_id) VALUES ($1, $2, $3)",
+        "INSERT INTO signup_tokens (name, email, birth, gender, certificate_image, token, inviter_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        name,
         email,
+        birth,
+        gender,
+        img,
         token,
         inviter_id
     )
     .execute(&mut conn)
     .await?;
 
-    // 4. 寄信
-    if let Some(id) = inviter_id {
-        let inviter_name = get_by_id(id).await?.user_name;
-        send_invitation_email(&token, &email, inviter_name).await?;
-    } else {
-        send_signup_email(&token, &email).await?;
-    }
+    log::trace!("已紀錄信箱 {} 所提出的帳號申請", email);
 
     conn.commit().await?;
+    Ok(())
+}
+pub async fn send_first_set_account_and_password_email(email: String) -> Fallible<()> {
+    let pool = get_pool();
+    let signup_token = sqlx::query!("SELECT token FROM signup_tokens WHERE email = $1", email)
+        .fetch_optional(pool)
+        .await?;
+
+    if let Some(signup_token) = signup_token {
+        send_signup_email(&(signup_token.token), &email).await?;
+    } else {
+        log::trace!("遇設定帳密之信箱 {} 尚未提出申請", email);
+    }
+
     Ok(())
 }
 pub async fn send_reset_password_email(email: String) -> Fallible<()> {

@@ -5,7 +5,7 @@ use crate::service;
 use crate::util::{HasArticleStats, HasBoardProps};
 use crate::{Context, Ctx};
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use std::collections::HashMap;
 
 async fn complete_article<A: HasArticleStats>(mut articles: A, ctx: &mut Ctx) -> Fallible<A> {
@@ -395,22 +395,41 @@ impl api_trait::BoardQueryRouter for BoardQueryRouter {
 pub struct UserQueryRouter {}
 #[async_trait]
 impl api_trait::UserQueryRouter for UserQueryRouter {
+    async fn record_signup_apply(
+        &self,
+        context: &mut crate::Ctx,
+        name: String,
+        email: String,
+        birth_year: i32,
+        birth_month: i32,
+        birth_date: i32,
+        gender: String,
+        certificate_image: String,
+        is_invite: bool,
+    ) -> Result<(), crate::custom_error::Error> {
+        let inviter_id = if is_invite {
+            Some(context.get_id_strict().await?)
+        } else {
+            None
+        };
+        db::user::create_signup_token(
+            &name,
+            &email,
+            NaiveDate::from_ymd(birth_year, birth_month as u32, birth_date as u32),
+            &gender,
+            &certificate_image,
+            inviter_id,
+        )
+        .await
+    }
     async fn send_signup_email(
         &self,
         context: &mut crate::Ctx,
         email: String,
         is_invite: bool,
     ) -> Result<(), crate::custom_error::Error> {
-        let conf = crate::config::get_config();
-        if !conf.account.allow_self_signup && !is_invite {
-            return Err(ErrorCode::NotAllowSelfSignup.into());
-        }
-        let inviter_id = if is_invite {
-            Some(context.get_id_strict().await?)
-        } else {
-            None
-        };
-        db::user::create_signup_token(&email, inviter_id).await
+        db::user::send_first_set_account_and_password_email(email);
+        Ok(())
     }
     async fn send_reset_password_email(
         &self,

@@ -28,6 +28,17 @@ pub enum UserQuery {
     QueryMyFavoriteArticleList {},
 
     #[chitin(leaf, response = "()")]
+    RecordSignupApply {
+        name: String,
+        email: String,
+        birth_year: i32,
+        birth_month: i32,
+        birth_date: i32,
+        gender: String,
+        certificate_image: String,
+        is_invite: bool,
+    },
+    #[chitin(leaf, response = "()")]
     SendSignupEmail { email: String, is_invite: bool },
     #[chitin(leaf, response = "()")]
     SendResetPasswordEmail { email: String },
@@ -210,5 +221,5 @@ pub enum NotificationQuery {
 #[derive(Serialize, Deserialize, ChitinRouter, Debug, Clone)]
 pub enum ConfigQuery {
     #[chitin(leaf, response = "super::model::Config")]
-    QueryConfig { },
+    QueryConfig {},
 }
